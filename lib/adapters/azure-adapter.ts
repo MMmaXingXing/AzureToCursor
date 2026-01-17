@@ -331,6 +331,18 @@ export async function adaptRequestToAzure(
     if (payload.text !== undefined) {
       delete payload.text;
     }
+    if (Array.isArray(payload.tools)) {
+      const sanitizedTools = payload.tools.filter((tool: any) => {
+        if (!tool || typeof tool !== 'object') return false;
+        if (tool.type !== 'function') return false;
+        return Boolean(tool.function && typeof tool.function === 'object' && tool.function.name);
+      });
+      if (sanitizedTools.length > 0) {
+        payload.tools = sanitizedTools;
+      } else {
+        delete payload.tools;
+      }
+    }
   };
 
   if (isCodex) {
@@ -482,6 +494,18 @@ export async function proxyToAzureStream(
     }
     if (payload.text !== undefined) {
       delete payload.text;
+    }
+    if (Array.isArray(payload.tools)) {
+      const sanitizedTools = payload.tools.filter((tool: any) => {
+        if (!tool || typeof tool !== 'object') return false;
+        if (tool.type !== 'function') return false;
+        return Boolean(tool.function && typeof tool.function === 'object' && tool.function.name);
+      });
+      if (sanitizedTools.length > 0) {
+        payload.tools = sanitizedTools;
+      } else {
+        delete payload.tools;
+      }
     }
   };
 
