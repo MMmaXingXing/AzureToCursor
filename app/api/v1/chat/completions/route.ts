@@ -12,20 +12,39 @@ export async function POST(request: NextRequest) {
     console.log(...sanitizeLogMessage('Incoming /v1/chat/completions body:', rawBody));
 
     const extractText = (content: any): string => {
+      const normalizeContentItem = (item: any): string => {
+        if (typeof item === 'string') return item;
+        if (!item || typeof item !== 'object') return '';
+        if (typeof item.text === 'string') return item.text;
+        if (typeof item.content === 'string') return item.content;
+        if (typeof item.input_text === 'string') return item.input_text;
+        if (typeof item.value === 'string') return item.value;
+        if (item?.text && typeof item.text?.value === 'string') return item.text.value;
+        if (item?.content && typeof item.content?.value === 'string') return item.content.value;
+        return '';
+      };
+
       if (typeof content === 'string') return content;
       if (Array.isArray(content)) {
         return content
-          .map((item) => {
-            if (typeof item === 'string') return item;
-            if (item?.text) return item.text;
-            if (item?.content) return item.content;
-            return '';
-          })
+          .map((item) => normalizeContentItem(item))
           .filter(Boolean)
           .join('\n');
       }
-      if (content?.text) return content.text;
-      if (content?.content) return content.content;
+      if (content && typeof content === 'object') {
+        if (typeof content.text === 'string') return content.text;
+        if (typeof content.content === 'string') return content.content;
+        if (Array.isArray(content.content)) {
+          return content.content
+            .map((item: any) => normalizeContentItem(item))
+            .filter(Boolean)
+            .join('\n');
+        }
+        if (typeof content.input_text === 'string') return content.input_text;
+        if (typeof content.value === 'string') return content.value;
+        if (content?.text && typeof content.text?.value === 'string') return content.text.value;
+        if (content?.content && typeof content.content?.value === 'string') return content.content.value;
+      }
       return '';
     };
 
@@ -34,21 +53,27 @@ export async function POST(request: NextRequest) {
 
       // 显式处理 Cursor 风格的 input 数组
       if (Array.isArray(candidate)) {
-        const validMessages = candidate.filter(item =>
-          item?.role && (typeof item.content === 'string' || item.content)
-        );
-        if (validMessages.length > 0) {
+        const toMessage = (item: any) => {
+          const role = item?.role ?? item?.message?.role;
+          const contentSource = item?.content ?? item?.text ?? item?.message?.content ?? item?.input ?? item?.parts;
+          const content = extractText(contentSource);
+          if (!role || !content) return undefined;
+          return { role, content };
+        };
+
+        const normalizedMessages = candidate
+          .map((item) => toMessage(item))
+          .filter(Boolean) as ChatRequest['messages'];
+
+        if (normalizedMessages.length > 0) {
           console.log(
             ...sanitizeLogMessage('[DEBUG] Build messages from input array:', {
               length: candidate.length,
-              validCount: validMessages.length,
-              roles: validMessages.map(item => item.role).slice(0, 5),
+              validCount: normalizedMessages.length,
+              roles: normalizedMessages.map(item => item.role).slice(0, 5),
             })
           );
-          return validMessages.map((item) => ({
-            role: item.role,
-            content: extractText(item.content),
-          }));
+          return normalizedMessages;
         }
         if (candidate.every(item => typeof item === 'string')) {
           return [{ role: 'user', content: candidate.join('\n') }];
@@ -56,11 +81,19 @@ export async function POST(request: NextRequest) {
         return undefined;
       }
 
-      if (typeof candidate === 'object' && candidate?.role !== undefined) {
+      if (typeof candidate === 'object') {
+        if (Array.isArray(candidate.messages)) {
+          return buildMessages(candidate.messages);
+        }
+        if (Array.isArray(candidate.input)) {
+          return buildMessages(candidate.input);
+        }
+        if (candidate?.role !== undefined) {
         return [{
           role: candidate.role,
-          content: extractText(candidate.content),
+            content: extractText(candidate.content ?? candidate.text ?? candidate.input ?? candidate.parts),
         }];
+        }
       }
       if (typeof candidate === 'string' && candidate.trim()) {
         return [{ role: 'user', content: candidate }];
