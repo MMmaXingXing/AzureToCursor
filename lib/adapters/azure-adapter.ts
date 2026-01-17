@@ -329,7 +329,7 @@ export async function adaptRequestToAzure(
     azureUrl = `${baseUrl}/openai/responses?api-version=${apiVersion || '2025-04-01-preview'}`;
     
     // Responses API 请求格式：使用 input 字段（而不是 messages），使用 max_output_tokens
-    const { model, messages, max_tokens, stream, ...otherParams } = request;
+    const { model, messages, max_tokens, stream, input: _input, ...otherParams } = request as any;
     
     // 构建符合 Responses API 规范的请求体
     requestBody = {
@@ -360,8 +360,8 @@ export async function adaptRequestToAzure(
     // Chat 模型使用 /chat/completions 端点
     azureUrl = `${baseUrl}/openai/deployments/${deploymentName}/chat/completions?api-version=${apiVersion || '2024-02-15-preview'}`;
     
-    // Chat 模型使用 messages，移除 model 字段
-    const { model, ...rest } = request;
+    // Chat 模型使用 messages，移除 model 字段与 input
+    const { model, input: _input, ...rest } = request as any;
     requestBody = { ...rest };
     stripUnsupportedParams(requestBody);
     
@@ -380,6 +380,7 @@ export async function adaptRequestToAzure(
 
   if (!response.ok) {
     const errorText = await response.text();
+    console.error('11111111111 Azure OpenAI error body 11111111111', errorText);
     // 清理错误消息中的敏感信息
     const safeErrorText = sanitizeString(errorText);
     throw new Error(
@@ -471,7 +472,7 @@ export async function proxyToAzureStream(
     azureUrl = `${baseUrl}/openai/responses?api-version=${apiVersion || '2025-04-01-preview'}`;
     
     // Responses API 请求格式：使用 input 字段（而不是 messages），使用 max_output_tokens
-    const { model, messages, max_tokens, stream, ...otherParams } = request;
+    const { model, messages, max_tokens, stream, input: _input, ...otherParams } = request as any;
     azureRequestBody = {
       input: messagesToResponsesInput(messages), // Responses API 使用结构化 input
       model: deploymentName,
@@ -495,8 +496,8 @@ export async function proxyToAzureStream(
     // Chat 模型使用 /chat/completions 端点
     azureUrl = `${baseUrl}/openai/deployments/${deploymentName}/chat/completions?api-version=${apiVersion || '2024-02-15-preview'}`;
     
-    // Chat 模型使用 messages
-    const { model, ...requestBody } = request;
+    // Chat 模型使用 messages，移除 input
+    const { model, input: _input, ...requestBody } = request as any;
     azureRequestBody = {
       ...requestBody,
       stream: true,
@@ -518,6 +519,7 @@ export async function proxyToAzureStream(
 
   if (!azureResponse.ok) {
     const errorText = await azureResponse.text();
+    console.error('11111111111 Azure OpenAI stream error body 11111111111', errorText);
     // 清理错误消息中的敏感信息
     const safeErrorText = sanitizeString(errorText);
     return new Response(
