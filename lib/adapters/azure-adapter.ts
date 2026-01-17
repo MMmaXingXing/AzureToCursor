@@ -343,6 +343,11 @@ export async function adaptRequestToAzure(
         delete payload.tools;
       }
     }
+    if (!Array.isArray(payload.tools) || payload.tools.length === 0) {
+      if (payload.tool_choice !== undefined) {
+        delete payload.tool_choice;
+      }
+    }
   };
 
   if (isCodex) {
@@ -505,6 +510,11 @@ export async function proxyToAzureStream(
         payload.tools = sanitizedTools;
       } else {
         delete payload.tools;
+      }
+    }
+    if (!Array.isArray(payload.tools) || payload.tools.length === 0) {
+      if (payload.tool_choice !== undefined) {
+        delete payload.tool_choice;
       }
     }
   };
