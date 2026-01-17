@@ -338,6 +338,9 @@ export async function adaptRequestToAzure(
     if (payload.store !== undefined) {
       delete payload.store;
     }
+    if (payload.prompt_cache_retention !== undefined) {
+      delete payload.prompt_cache_retention;
+    }
     if (Array.isArray(payload.tools)) {
       const sanitizedTools = payload.tools.filter((tool: any) => {
         if (!tool || typeof tool !== 'object') return false;
@@ -513,6 +516,9 @@ export async function proxyToAzureStream(
     }
     if (payload.store !== undefined) {
       delete payload.store;
+    }
+    if (payload.prompt_cache_retention !== undefined) {
+      delete payload.prompt_cache_retention;
     }
     if (Array.isArray(payload.tools)) {
       const sanitizedTools = payload.tools.filter((tool: any) => {
