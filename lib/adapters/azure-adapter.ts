@@ -331,6 +331,13 @@ export async function adaptRequestToAzure(
     if (payload.text !== undefined) {
       delete payload.text;
     }
+    const storeEnabled = payload.store === true;
+    if (!storeEnabled && payload.metadata !== undefined) {
+      delete payload.metadata;
+    }
+    if (payload.store !== undefined) {
+      delete payload.store;
+    }
     if (Array.isArray(payload.tools)) {
       const sanitizedTools = payload.tools.filter((tool: any) => {
         if (!tool || typeof tool !== 'object') return false;
@@ -499,6 +506,13 @@ export async function proxyToAzureStream(
     }
     if (payload.text !== undefined) {
       delete payload.text;
+    }
+    const storeEnabled = payload.store === true;
+    if (!storeEnabled && payload.metadata !== undefined) {
+      delete payload.metadata;
+    }
+    if (payload.store !== undefined) {
+      delete payload.store;
     }
     if (Array.isArray(payload.tools)) {
       const sanitizedTools = payload.tools.filter((tool: any) => {
