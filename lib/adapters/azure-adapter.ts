@@ -314,6 +314,16 @@ export async function adaptRequestToAzure(
   let requestBody: any;
   let headers: Record<string, string>;
 
+  const stripUnsupportedParams = (payload: Record<string, any>) => {
+    // Azure OpenAI doesn't accept OpenAI Responses API stream_options
+    if (payload.stream_options && typeof payload.stream_options === 'object') {
+      delete payload.stream_options;
+    }
+    if (payload.stream_options?.include_usage !== undefined) {
+      delete payload.stream_options;
+    }
+  };
+
   if (isCodex) {
     // Codex 模型使用 /openai/responses 端点
     azureUrl = `${baseUrl}/openai/responses?api-version=${apiVersion || '2025-04-01-preview'}`;
@@ -327,6 +337,7 @@ export async function adaptRequestToAzure(
       model: deploymentName,
       ...otherParams,
     };
+    stripUnsupportedParams(requestBody);
     
     // 转换参数名称（Responses API 使用 max_output_tokens 而不是 max_tokens）
     if (max_tokens !== undefined) {
@@ -351,7 +362,8 @@ export async function adaptRequestToAzure(
     
     // Chat 模型使用 messages，移除 model 字段
     const { model, ...rest } = request;
-    requestBody = rest;
+    requestBody = { ...rest };
+    stripUnsupportedParams(requestBody);
     
     headers = {
       'Content-Type': 'application/json',
@@ -445,6 +457,15 @@ export async function proxyToAzureStream(
   let azureRequestBody: any;
   let headers: Record<string, string>;
 
+  const stripUnsupportedParams = (payload: Record<string, any>) => {
+    if (payload.stream_options && typeof payload.stream_options === 'object') {
+      delete payload.stream_options;
+    }
+    if (payload.stream_options?.include_usage !== undefined) {
+      delete payload.stream_options;
+    }
+  };
+
   if (isCodex) {
     // Codex 模型使用 /openai/responses 端点（Responses API）
     azureUrl = `${baseUrl}/openai/responses?api-version=${apiVersion || '2025-04-01-preview'}`;
@@ -457,6 +478,7 @@ export async function proxyToAzureStream(
       stream: true, // 流式请求
       ...otherParams,
     };
+    stripUnsupportedParams(azureRequestBody);
     
     // 转换参数名称（Responses API 使用 max_output_tokens 而不是 max_tokens）
     if (max_tokens !== undefined) {
@@ -479,6 +501,7 @@ export async function proxyToAzureStream(
       ...requestBody,
       stream: true,
     };
+    stripUnsupportedParams(azureRequestBody);
     
     headers = {
       'Content-Type': 'application/json',
