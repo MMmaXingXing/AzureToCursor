@@ -325,6 +325,9 @@ export async function adaptRequestToAzure(
     if (payload.include !== undefined) {
       delete payload.include;
     }
+    if (payload.reasoning !== undefined) {
+      delete payload.reasoning;
+    }
   };
 
   if (isCodex) {
@@ -470,6 +473,9 @@ export async function proxyToAzureStream(
     }
     if (payload.include !== undefined) {
       delete payload.include;
+    }
+    if (payload.reasoning !== undefined) {
+      delete payload.reasoning;
     }
   };
 
