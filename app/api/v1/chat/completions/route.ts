@@ -9,6 +9,7 @@ export async function POST(request: NextRequest) {
     // 解析请求体
     const rawBody = await request.json();
     const body = { ...rawBody } as ChatRequest;
+    console.log(...sanitizeLogMessage('Incoming /v1/chat/completions body:', rawBody));
 
     const extractText = (content: any): string => {
       if (typeof content === 'string') return content;
