@@ -10,44 +10,74 @@ export async function POST(request: NextRequest) {
     const rawBody = await request.json();
     const body = { ...rawBody } as ChatRequest;
 
-    // 兼容部分客户端仅提供 input/prompt 的情况
-    if (!body.messages || !Array.isArray(body.messages)) {
-      const input = rawBody?.input ?? rawBody?.prompt ?? rawBody?.text;
-      const extractText = (content: any): string => {
-        if (typeof content === 'string') return content;
-        if (Array.isArray(content)) {
-          return content
-            .map((item) => {
-              if (typeof item === 'string') return item;
-              if (item?.text) return item.text;
-              if (item?.content) return item.content;
-              return '';
-            })
-            .filter(Boolean)
-            .join('\n');
-        }
-        if (content?.text) return content.text;
-        if (content?.content) return content.content;
-        return '';
-      };
+    const extractText = (content: any): string => {
+      if (typeof content === 'string') return content;
+      if (Array.isArray(content)) {
+        return content
+          .map((item) => {
+            if (typeof item === 'string') return item;
+            if (item?.text) return item.text;
+            if (item?.content) return item.content;
+            return '';
+          })
+          .filter(Boolean)
+          .join('\n');
+      }
+      if (content?.text) return content.text;
+      if (content?.content) return content.content;
+      return '';
+    };
 
-      if (Array.isArray(input)) {
-        // input 可能是 OpenAI message 数组或 Responses API input 数组
-        if (input.every(item => item?.role && item?.content !== undefined)) {
-          body.messages = input.map((item) => ({
+    const buildMessages = (candidate: any): ChatRequest['messages'] | undefined => {
+      if (!candidate) return undefined;
+      if (Array.isArray(candidate)) {
+        if (candidate.length === 0) return undefined;
+        if (candidate.every(item => item?.role !== undefined && item?.content !== undefined)) {
+          return candidate.map((item) => ({
             role: item.role,
             content: extractText(item.content),
           }));
-        } else if (input.length > 0 && typeof input[0] === 'string') {
-          body.messages = [{ role: 'user', content: input.join('\n') }];
         }
-      } else if (typeof input === 'object' && input?.role) {
-        body.messages = [{
-          role: input.role,
-          content: extractText(input.content),
+        if (candidate.every(item => typeof item === 'string')) {
+          return [{ role: 'user', content: candidate.join('\n') }];
+        }
+      }
+      if (typeof candidate === 'object' && candidate?.role !== undefined) {
+        return [{
+          role: candidate.role,
+          content: extractText(candidate.content),
         }];
-      } else if (typeof input === 'string' && input.trim()) {
-        body.messages = [{ role: 'user', content: input }];
+      }
+      if (typeof candidate === 'string' && candidate.trim()) {
+        return [{ role: 'user', content: candidate }];
+      }
+      return undefined;
+    };
+
+    // 兼容部分客户端仅提供 input/prompt 的情况
+    if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
+      const candidates = [
+        rawBody?.messages,
+        rawBody?.input,
+        rawBody?.prompt,
+        rawBody?.text,
+        rawBody?.data?.messages,
+        rawBody?.data?.input,
+        rawBody?.payload?.messages,
+        rawBody?.payload?.input,
+        rawBody?.request?.messages,
+        rawBody?.request?.input,
+        rawBody?.inputs?.messages,
+        rawBody?.inputs?.input,
+        rawBody?.params?.messages,
+      ];
+
+      for (const candidate of candidates) {
+        const normalized = buildMessages(candidate);
+        if (normalized && normalized.length > 0) {
+          body.messages = normalized;
+          break;
+        }
       }
     }
 
