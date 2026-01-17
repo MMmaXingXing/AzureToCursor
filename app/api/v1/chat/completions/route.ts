@@ -31,10 +31,21 @@ export async function POST(request: NextRequest) {
 
     const buildMessages = (candidate: any): ChatRequest['messages'] | undefined => {
       if (!candidate) return undefined;
+
+      // 显式处理 Cursor 风格的 input 数组
       if (Array.isArray(candidate)) {
-        if (candidate.length === 0) return undefined;
-        if (candidate.every(item => item?.role !== undefined && item?.content !== undefined)) {
-          return candidate.map((item) => ({
+        const validMessages = candidate.filter(item =>
+          item?.role && (typeof item.content === 'string' || item.content)
+        );
+        if (validMessages.length > 0) {
+          console.log(
+            ...sanitizeLogMessage('[DEBUG] Build messages from input array:', {
+              length: candidate.length,
+              validCount: validMessages.length,
+              roles: validMessages.map(item => item.role).slice(0, 5),
+            })
+          );
+          return validMessages.map((item) => ({
             role: item.role,
             content: extractText(item.content),
           }));
@@ -42,7 +53,9 @@ export async function POST(request: NextRequest) {
         if (candidate.every(item => typeof item === 'string')) {
           return [{ role: 'user', content: candidate.join('\n') }];
         }
+        return undefined;
       }
+
       if (typeof candidate === 'object' && candidate?.role !== undefined) {
         return [{
           role: candidate.role,
@@ -58,8 +71,8 @@ export async function POST(request: NextRequest) {
     // 兼容部分客户端仅提供 input/prompt 的情况
     if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
       const candidates = [
-        rawBody?.messages,
         rawBody?.input,
+        rawBody?.messages,
         rawBody?.prompt,
         rawBody?.text,
         rawBody?.data?.messages,
@@ -74,7 +87,25 @@ export async function POST(request: NextRequest) {
       ];
 
       for (const candidate of candidates) {
+        console.log(
+          ...sanitizeLogMessage('[DEBUG] Candidate summary:', {
+            type: Array.isArray(candidate) ? 'array' : typeof candidate,
+            isNull: candidate === null,
+            isUndefined: candidate === undefined,
+            length: Array.isArray(candidate) ? candidate.length : undefined,
+            keys: candidate && typeof candidate === 'object' && !Array.isArray(candidate)
+              ? Object.keys(candidate).slice(0, 10)
+              : undefined,
+          })
+        );
         const normalized = buildMessages(candidate);
+        console.log(
+          ...sanitizeLogMessage('[DEBUG] Normalized messages summary:', {
+            count: normalized?.length ?? 0,
+            roles: normalized?.map(item => item.role).slice(0, 5) ?? [],
+            hasContent: normalized?.map(item => Boolean(item.content)).slice(0, 5) ?? [],
+          })
+        );
         if (normalized && normalized.length > 0) {
           body.messages = normalized;
           break;
