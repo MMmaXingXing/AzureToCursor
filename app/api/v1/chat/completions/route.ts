@@ -13,11 +13,39 @@ export async function POST(request: NextRequest) {
     // 兼容部分客户端仅提供 input/prompt 的情况
     if (!body.messages || !Array.isArray(body.messages)) {
       const input = rawBody?.input ?? rawBody?.prompt ?? rawBody?.text;
-      if (Array.isArray(input)) {
-        // 如果 input 本身是 OpenAI message 数组
-        if (input.every(item => item?.role && item?.content !== undefined)) {
-          body.messages = input;
+      const extractText = (content: any): string => {
+        if (typeof content === 'string') return content;
+        if (Array.isArray(content)) {
+          return content
+            .map((item) => {
+              if (typeof item === 'string') return item;
+              if (item?.text) return item.text;
+              if (item?.content) return item.content;
+              return '';
+            })
+            .filter(Boolean)
+            .join('\n');
         }
+        if (content?.text) return content.text;
+        if (content?.content) return content.content;
+        return '';
+      };
+
+      if (Array.isArray(input)) {
+        // input 可能是 OpenAI message 数组或 Responses API input 数组
+        if (input.every(item => item?.role && item?.content !== undefined)) {
+          body.messages = input.map((item) => ({
+            role: item.role,
+            content: extractText(item.content),
+          }));
+        } else if (input.length > 0 && typeof input[0] === 'string') {
+          body.messages = [{ role: 'user', content: input.join('\n') }];
+        }
+      } else if (typeof input === 'object' && input?.role) {
+        body.messages = [{
+          role: input.role,
+          content: extractText(input.content),
+        }];
       } else if (typeof input === 'string' && input.trim()) {
         body.messages = [{ role: 'user', content: input }];
       }
