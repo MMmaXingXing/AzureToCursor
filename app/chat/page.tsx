@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -26,7 +26,7 @@ export default function ChatTestPage() {
   const isCodexModel = modelInfo.find(m => m.id === model)?.type === 'codex';
 
   // 加载模型列表和信息
-  const loadModels = async () => {
+  const loadModels = useCallback(async () => {
     try {
       // 加载模型列表
       const response = await fetch('/api/v1/models');
@@ -50,12 +50,12 @@ export default function ChatTestPage() {
     } catch (error) {
       console.error('Failed to load models:', error);
     }
-  };
+  }, [model]);
 
   // 页面加载时获取模型列表
   useEffect(() => {
     loadModels();
-  }, []);
+  }, [loadModels]);
 
   const sendMessage = async (useStream: boolean = false) => {
     if (!input.trim() || loading) return;

@@ -77,19 +77,20 @@ export function sanitizeObject<T extends Record<string, any>>(
     return obj;
   }
 
-  const sanitized = Array.isArray(obj) ? [...obj] : { ...obj };
+  const sanitized: any = Array.isArray(obj) ? [...obj] : { ...obj };
 
   for (const key in sanitized) {
     if (Object.prototype.hasOwnProperty.call(sanitized, key)) {
       const lowerKey = key.toLowerCase();
       const isSensitive = allSensitiveFields.some(field => lowerKey.includes(field));
 
-      if (isSensitive && typeof sanitized[key] === 'string') {
-        sanitized[key] = mask ? maskSensitiveValue(sanitized[key]) : hideSensitiveValue(sanitized[key]);
-      } else if (isSensitive && sanitized[key] != null) {
+      const value = sanitized[key];
+      if (isSensitive && typeof value === 'string') {
+        sanitized[key] = mask ? maskSensitiveValue(value) : hideSensitiveValue(value);
+      } else if (isSensitive && value != null) {
         sanitized[key] = REDACTED_MARKER;
-      } else if (typeof sanitized[key] === 'object' && sanitized[key] !== null) {
-        sanitized[key] = sanitizeObject(sanitized[key], options);
+      } else if (typeof value === 'object' && value !== null) {
+        sanitized[key] = sanitizeObject(value, options);
       }
     }
   }

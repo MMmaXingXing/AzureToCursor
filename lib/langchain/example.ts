@@ -17,8 +17,13 @@ export async function example1() {
   });
 
   try {
-    const response = await llm.invoke("Hello, how are you?");
-    console.log(response.content);
+    // 避免不同版本类型不一致导致的编译错误
+    const response = await (llm as any).invoke("Hello, how are you?");
+    const content =
+      typeof response === 'string'
+        ? response
+        : response?.content ?? JSON.stringify(response);
+    console.log(content);
   } catch (error) {
     console.error('Error:', error);
   }
@@ -26,7 +31,7 @@ export async function example1() {
 
 // 示例 2: 直接调用 API 路由（如果 LangChain 集成有问题）
 export async function example2() {
-  const response = await fetch('/api/chat', {
+  const response = await fetch('/api/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

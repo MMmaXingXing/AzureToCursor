@@ -56,6 +56,10 @@ curl http://localhost:3000/api/v1/models
 
 > Cursor 可能阻止访问本地地址（SSRF）。可用公网域名或内网穿透。
 
+## 部署
+
+```pm2 start npm --name azure-to-cursor -- start```
+
 ## 安全
 详见 `SECURITY.md`。请勿提交包含真实密钥的 `models.json` 或 `.env.local`。
 

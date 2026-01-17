@@ -199,7 +199,7 @@ export default function ConfigPage() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">模型配置管理</h1>
               <p className="text-sm text-gray-500 mt-1">
-                修改配置后请点击"保存配置"按钮以持久化到文件
+                修改配置后请点击&quot;保存配置&quot;按钮以持久化到文件
               </p>
             </div>
             <div className="flex items-center gap-4">
@@ -385,7 +385,7 @@ export default function ConfigPage() {
             </div>
           ) : (
             <div className="text-center py-8 text-gray-400">
-              暂无模型配置，点击"添加模型"添加
+              暂无模型配置，点击&quot;添加模型&quot;添加
             </div>
           )}
         </div>
