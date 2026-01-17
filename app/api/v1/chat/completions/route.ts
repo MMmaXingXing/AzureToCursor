@@ -7,7 +7,21 @@ import { sanitizeError, sanitizeLogMessage } from '@/lib/utils/sanitize';
 export async function POST(request: NextRequest) {
   try {
     // 解析请求体
-    const body = await request.json() as ChatRequest;
+    const rawBody = await request.json();
+    const body = { ...rawBody } as ChatRequest;
+
+    // 兼容部分客户端仅提供 input/prompt 的情况
+    if (!body.messages || !Array.isArray(body.messages)) {
+      const input = rawBody?.input ?? rawBody?.prompt ?? rawBody?.text;
+      if (Array.isArray(input)) {
+        // 如果 input 本身是 OpenAI message 数组
+        if (input.every(item => item?.role && item?.content !== undefined)) {
+          body.messages = input;
+        }
+      } else if (typeof input === 'string' && input.trim()) {
+        body.messages = [{ role: 'user', content: input }];
+      }
+    }
 
     // 验证请求格式
     if (!body.messages || !Array.isArray(body.messages)) {
