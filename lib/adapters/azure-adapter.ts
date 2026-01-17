@@ -315,12 +315,15 @@ export async function adaptRequestToAzure(
   let headers: Record<string, string>;
 
   const stripUnsupportedParams = (payload: Record<string, any>) => {
-    // Azure OpenAI doesn't accept OpenAI Responses API stream_options
+    // Azure OpenAI doesn't accept OpenAI Responses API stream_options/include
     if (payload.stream_options && typeof payload.stream_options === 'object') {
       delete payload.stream_options;
     }
     if (payload.stream_options?.include_usage !== undefined) {
       delete payload.stream_options;
+    }
+    if (payload.include !== undefined) {
+      delete payload.include;
     }
   };
 
@@ -464,6 +467,9 @@ export async function proxyToAzureStream(
     }
     if (payload.stream_options?.include_usage !== undefined) {
       delete payload.stream_options;
+    }
+    if (payload.include !== undefined) {
+      delete payload.include;
     }
   };
 
